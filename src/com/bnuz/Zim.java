@@ -204,8 +204,10 @@ public class Zim {
     public int getPageNumber(String resultHtml){
         Document document = Jsoup.parse(resultHtml);
         Elements ul = document.select("ul[class=paging-list]");
-        Elements lis = ul.get(0).select("ul+li:not(li[class^=PagedList])");
-        return lis.size();
+        Elements as = ul.get(0).select("a");
+        Elements except = ul.get(0).select("a[rel]");
+        int number = as.size()- except.size();
+        return number;
     }
     public static void main(String[] args) throws IOException {
         CloseableHttpClient client = HttpClients.createDefault();
