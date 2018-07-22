@@ -1,5 +1,6 @@
 package bnuz;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 
 import org.apache.http.NameValuePair;
@@ -21,14 +22,13 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 
 /**
  * Created by Keben on 2018-07-19.
  */
-public class Zim {
+public class Zim extends WebAnalysis{
 
     /**
      * 在下拉栏获取第一个港口信息
@@ -77,80 +77,12 @@ public class Zim {
     }
 
     /**
-     * 模拟ajax获取查询结果页面html
-     * @param client
-     * @param portCode
-     * @param portDistinationCode
-     * @param fromDate
-     * @param weeksahead
-     * @param direction
-     * @return
-     */
-
-    public String getHtml(CloseableHttpClient client, String portCode , String portDistinationCode , String fromDate , String weeksahead , String direction ,String pageNumber){
-        String resultHtml = null;
-        URIBuilder uriBuilder = null;
-        try {
-            uriBuilder = new URIBuilder("https://www.zim.com/schedules/point-to-point");
-            ArrayList<NameValuePair> queryList = new ArrayList<NameValuePair>();
-            NameValuePair queryPortCode = new BasicNameValuePair("portcode", portCode);
-            NameValuePair queryPortDistinationCode = new BasicNameValuePair("portdestinationcode", portDistinationCode);
-            NameValuePair queryFromDate = new BasicNameValuePair("fromdate", fromDate);
-            NameValuePair queryWeeksahead = new BasicNameValuePair("weeksahead", weeksahead);
-            NameValuePair queryDirection = new BasicNameValuePair("direction", direction);
-            if (pageNumber !=null){
-                NameValuePair queryPage = new BasicNameValuePair("page", pageNumber);
-                queryList.add(queryPage);
-            }
-
-
-            queryList.add(queryPortCode);
-            queryList.add(queryPortDistinationCode);
-            queryList.add(queryFromDate);
-            queryList.add(queryWeeksahead);
-            queryList.add(queryDirection);
-
-
-            uriBuilder.addParameters(queryList);
-
-            HttpGet get = new HttpGet(uriBuilder.build());
-            get.setHeader("Host","www.zim.com");
-            get.setHeader("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
-//            get.setHeader("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-//            get.setHeader("accept-encoding","gzip, deflate, br");
-//            get.setHeader("accept-language","en-US,en;q=0.5");
-//            get.setHeader("referer","https://www.zim.com/schedules/point-to-point?portcode=CALDO%3B0&portdestinationcode=USLAX%3B10&fromdate=19-07-2018&weeksahead=6&direction=True");
-//            get.setHeader("connection","keep-alive");
-//            get.setHeader("upgrade-insecure-requests","1");
-            CloseableHttpResponse response =client.execute(get);
-            int statusCode =response.getStatusLine().getStatusCode();
-            System.out.println("status: "+statusCode);
-            HttpEntity entity =response.getEntity();
-            resultHtml = EntityUtils.toString(entity,"utf-8");
-//            System.out.println("response : "+ resultHtml);
-            response.close();
-
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
-            if (resultHtml == null){
-                System.out.println("log : get ajax response fail.");
-            }
-            return resultHtml;
-        }
-    }
-
-
-    /**
      * 解析html表格中的信息
      * @param resultHtml
      * @return
      */
-    public void analysisMessage(List tables,String resultHtml){
+    @Override
+    public void analysisMessage(List tables, String resultHtml){
         Document document = Jsoup.parse(resultHtml);
 //        System.out.println(document.title());
         Elements tbody = document.select("tbody[class=p2p-tbody]");
@@ -209,6 +141,7 @@ public class Zim {
      * @param resultHtml
      * @return
      */
+    @Override
     public int getPageNumber(String resultHtml){
         Document document = Jsoup.parse(resultHtml);
         Elements ul = document.select("ul[class=paging-list]");
@@ -218,20 +151,32 @@ public class Zim {
         return number;
     }
     public static void main(String[] args) throws IOException {
+        String url = "https://www.zim.com/schedules/point-to-point";
         CloseableHttpClient client = HttpClients.createDefault();
         Zim zim = new Zim();
         int pageNumber = 0;
         String portCode = zim.getPortCode(client,"hong");
-        String portDistinationCode = zim.getPortCode(client,"los");
+        String portDestinationCode = zim.getPortCode(client,"los");
         System.out.println(portCode);
-        System.out.println(portDistinationCode);
+        System.out.println(portDestinationCode);
         String fromDate = "19-07-2018";
         String weeksahead ="6";
         String direction = "True";
         List<List<List<String>>> tables = new ArrayList<List<List<String>>>();
-        pageNumber = zim.getPageNumber(zim.getHtml(client,portCode,portDistinationCode,fromDate,weeksahead,direction,"0"));
+        Map paramMap = new HashMap();
+        Map headerMap = new HashMap();
+        paramMap.put("portcode",portCode);
+        paramMap.put("portdestinationcode",portDestinationCode);
+        paramMap.put("fromdate",fromDate);
+        paramMap.put("weeksahead",weeksahead);
+        paramMap.put("direction",direction);
+        headerMap.put("Host","www.zim.com");
+        headerMap.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
+
+        pageNumber = zim.getPageNumber(zim.getHtml(client,url,paramMap,headerMap));
         for (int i = 1 ; i <= pageNumber ; i++ ){
-            String html = zim.getHtml(client,portCode,portDistinationCode,fromDate,weeksahead,direction,i+"");
+            paramMap.put("page",""+i);
+            String html = zim.getHtml(client,url,paramMap,headerMap);
             zim.analysisMessage(tables,html);
         }
         System.out.println(tables.toString());
