@@ -1,4 +1,4 @@
-package com.bnuz;
+package bnuz;
 
 import org.apache.http.HttpEntity;
 
@@ -86,7 +86,8 @@ public class Zim {
      * @param direction
      * @return
      */
-    public String getTable(CloseableHttpClient client, String portCode , String portDistinationCode , String fromDate , String weeksahead , String direction ){
+
+    public String getHtml(CloseableHttpClient client, String portCode , String portDistinationCode , String fromDate , String weeksahead , String direction ,String pageNumber){
         String resultHtml = null;
         URIBuilder uriBuilder = null;
         try {
@@ -97,12 +98,18 @@ public class Zim {
             NameValuePair queryFromDate = new BasicNameValuePair("fromdate", fromDate);
             NameValuePair queryWeeksahead = new BasicNameValuePair("weeksahead", weeksahead);
             NameValuePair queryDirection = new BasicNameValuePair("direction", direction);
+            if (pageNumber !=null){
+                NameValuePair queryPage = new BasicNameValuePair("page", pageNumber);
+                queryList.add(queryPage);
+            }
+
 
             queryList.add(queryPortCode);
             queryList.add(queryPortDistinationCode);
             queryList.add(queryFromDate);
             queryList.add(queryWeeksahead);
             queryList.add(queryDirection);
+
 
             uriBuilder.addParameters(queryList);
 
@@ -143,14 +150,14 @@ public class Zim {
      * @param resultHtml
      * @return
      */
-    public void analysisTableMessage(String resultHtml){
+    public void analysisMessage(List tables,String resultHtml){
         Document document = Jsoup.parse(resultHtml);
-        System.out.println(document.title());
+//        System.out.println(document.title());
         Elements tbody = document.select("tbody[class=p2p-tbody]");
 //        System.out.println(tbody);
         Elements trs = tbody.select("tr");
 
-        List<List<List<String>>> tables = new ArrayList<List<List<String>>>();
+//        List<List<List<String>>> tables = new ArrayList<List<List<String>>>();
         int lineCount = 0;
         List<List<String>> table = new ArrayList<List<String>>();
         List<String> line = null;
@@ -193,7 +200,8 @@ public class Zim {
             }
             table.add(line);
         }
-        System.out.println(tables.get(0).toString());
+//        System.out.println(tables.get(0).toString());
+//        return tables;
     }
 
     /**
@@ -220,9 +228,13 @@ public class Zim {
         String fromDate = "19-07-2018";
         String weeksahead ="6";
         String direction = "True";
-        System.out.println(zim.getPageNumber(zim.getTable(client,portCode,portDistinationCode,fromDate,weeksahead,direction)));
-//        zim.analysisTableMessage(zim.getTable(client,portCode,portDistinationCode,fromDate,weeksahead,direction));
-
+        List<List<List<String>>> tables = new ArrayList<List<List<String>>>();
+        pageNumber = zim.getPageNumber(zim.getHtml(client,portCode,portDistinationCode,fromDate,weeksahead,direction,"0"));
+        for (int i = 1 ; i <= pageNumber ; i++ ){
+            String html = zim.getHtml(client,portCode,portDistinationCode,fromDate,weeksahead,direction,i+"");
+            zim.analysisMessage(tables,html);
+        }
+        System.out.println(tables.toString());
 
     }
 }
