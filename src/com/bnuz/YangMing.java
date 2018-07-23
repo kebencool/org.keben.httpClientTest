@@ -58,7 +58,17 @@ public class YangMing extends WebAnalysis{
         System.out.println(portDestinationCode);
 
         //调参
-
+        Map yangMingSearchDataMap = new HashMap();
+        yangMingSearchDataMap.put("_EVENTTARGET","ctl00$ContentPlaceHolder1$btnSearch0");
+        yangMingSearchDataMap.put("_EVENTARGUMENT","");
+        yangMingSearchDataMap.put("_VIEWSTATEGENERATOR","D33A6342");
+        yangMingSearchDataMap.put("ctl00$hidButtonType","0");
+        yangMingSearchDataMap.put("ctl00$hflslnlframe","");
+        yangMingSearchDataMap.put("ctl00$ctl142$hidlocalver","EN");
+//        yangMingSearchDataMap.put();
+//        yangMingSearchDataMap.put();
+//        yangMingSearchDataMap.put();
+//        yangMingSearchDataMap.put();
 
     }
 }
