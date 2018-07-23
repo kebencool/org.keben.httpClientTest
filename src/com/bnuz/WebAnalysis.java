@@ -1,4 +1,4 @@
-package bnuz;
+package com.bnuz;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
@@ -35,11 +35,21 @@ public abstract class WebAnalysis {
      * @return
      */
     public abstract int getPageNumber(String resultHtml);
+
+    /**
+     * 在下拉栏获取并切割出第一个港口信息
+     * @param portMessage
+     * @return
+     */
+    public abstract String getPortCode(String portMessage);
+
     /**
      * 模拟ajax获取查询结果页面html
      * @param client
      * @return
      */
+
+
 
     public String getHtml(CloseableHttpClient client, String url , Map params, Map header){
 

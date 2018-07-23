@@ -1,4 +1,4 @@
-package bnuz;
+package com.bnuz;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -28,52 +28,22 @@ import java.util.*;
 /**
  * Created by Keben on 2018-07-19.
  */
-public class Zim extends WebAnalysis{
+public class Zim extends WebAnalysis {
 
     /**
-     * 在下拉栏获取第一个港口信息
-     * @param client
-     * @param portCode
+     * 在下拉栏获取并切割出第一个港口信息
+     * @param portMessage
      * @return
      */
-    public String getPortCode(CloseableHttpClient client, String portCode){
+    @Override
+    public String getPortCode(String portMessage){
         String result = null;
-        URIBuilder uriBuilder = null;
-        try {
-            uriBuilder = new URIBuilder("https://www.zim.com/umbraco/surface/ScheduleByRoute/GetPortsInLands");
-            uriBuilder.addParameter("query",portCode);
-            HttpGet get = new HttpGet(uriBuilder.build());
-            get.setHeader("accept", "text/plain, */*; q=0.01");
-            get.setHeader("accept-encoding","gzip, deflate, br");
-            get.setHeader("accept-language","zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6,en-GB;q=0.5");
-            get.setHeader("cache-control","no-cache");
-            get.setHeader("pragma","no-cache");
-            get.setHeader("referer","https://www.zim.com/schedules/point-to-point");
-            get.setHeader("user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
-            get.setHeader("x-requested-with","XMLHttpRequest");
-            CloseableHttpResponse response =client.execute(get);
-            int statusCode =response.getStatusLine().getStatusCode();
-            System.out.println("status: "+statusCode);
-            HttpEntity entity =response.getEntity();
-            String string = EntityUtils.toString(entity,"utf-8");
-            System.out.println("response : "+ string);
-            String[] strings = string.split("\"");
-            result = strings[9];
-            response.close();
-
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
-
-            if (result == null){
-                System.out.println("log : get port ajax response fail.");
-            }
-            return result;
+        if (portMessage == null){
+            System.out.println("log : analysis port code fail.");
         }
+        String[] strings = portMessage.split("\"");
+        result = strings[9];
+        return result;
     }
 
     /**
@@ -152,13 +122,23 @@ public class Zim extends WebAnalysis{
     }
     public static void main(String[] args) throws IOException {
         String url = "https://www.zim.com/schedules/point-to-point";
+        String portUrl = "https://www.zim.com/umbraco/surface/ScheduleByRoute/GetPortsInLands";
         CloseableHttpClient client = HttpClients.createDefault();
         Zim zim = new Zim();
         int pageNumber = 0;
-        String portCode = zim.getPortCode(client,"hong");
-        String portDestinationCode = zim.getPortCode(client,"los");
+
+//        获取港口信息
+        Map portParamMap = new HashMap();
+        portParamMap.put("query","hong");
+        Map portHeaderMap = new HashMap();
+        portHeaderMap.put("user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
+        String portCode = zim.getPortCode(zim.getHtml(client,portUrl,portParamMap,portHeaderMap));
         System.out.println(portCode);
+        portParamMap.put("query","los");
+        String portDestinationCode = zim.getPortCode(zim.getHtml(client,portUrl,portParamMap,portHeaderMap));
         System.out.println(portDestinationCode);
+
+//        模拟查询
         String fromDate = "19-07-2018";
         String weeksahead ="6";
         String direction = "True";
@@ -179,7 +159,16 @@ public class Zim extends WebAnalysis{
             String html = zim.getHtml(client,url,paramMap,headerMap);
             zim.analysisMessage(tables,html);
         }
-        System.out.println(tables.toString());
+//        System.out.println(tables.toString());
+        for (List<List<String>> table : tables){
+            for (List<String> line : table){
+                System.out.print("||");
+                for (String s : line){
+                    System.out.print(s+" || ");
+                }
+                System.out.println();
+            }
+        }
 
     }
 }
