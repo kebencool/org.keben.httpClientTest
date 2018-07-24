@@ -1,13 +1,77 @@
-package bnuz;
+package com.bnuz;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class YangMing extends WebAnalysis{
+    String cookie;
+
+
+    private HashMap<String, String> getNextRequestBody() throws IOException {
+        CloseableHttpClient client = null;
+        CloseableHttpResponse response = null;
+        try {
+            client = HttpClients.createDefault();
+            HttpGet get = new HttpGet("https://o-www.yangming.com/e-service/schedule/PointToPoint.aspx");
+            String rawHeaders = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\nAccept-Encoding: gzip, deflate, br\nAccept-Language: zh-CN,zh;q=0.9\nCache-Control: max-age=0\nConnection: keep-alive\nHost: o-www.yangming.com\nUpgrade-Insecure-Requests: 1\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36";
+            String[] splitHeaders = rawHeaders.split("\n");
+            for (String s : splitHeaders) {
+                String[] split = s.split(": ");
+                get.addHeader(split[0], split[1]);
+            }
+
+            response = client.execute(get);
+
+            cookie =response.getFirstHeader("Set-Cookie").getValue();
+
+            HttpEntity entity = response.getEntity();
+            String result = EntityUtils.toString(entity);
+            Document document = Jsoup.parse(result);
+            Elements elements = document.getElementsByAttributeValue("type", "hidden");
+            HashMap<String, String> map = new HashMap();
+            for (Element element : elements) {
+                String name = element.attr("name");
+                String value = element.attr("value");
+                if (name.charAt(0) == '_') {
+                    map.put(name, value);
+                }
+            }
+            return map;
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                if (client != null) {
+                    client.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
 
     public void analysisMessage(List tables, String resultHtml) {
 
@@ -28,11 +92,50 @@ public class YangMing extends WebAnalysis{
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        String homeUrl = "https://www.yangming.com/e-service/schedule/PointToPoint.aspx";
         String searchUrl = "https://www.yangming.com/e-service/schedule/PointToPointResult.aspx";
         String portUrl = "https://o-www.yangming.com/e-service/schedule/PointToPoint_LocList.ashx";
+        String __EVENTTARGET = null;
+        String __EVENTARGUMENT = "";
+        String __VIEWSTATE = null;
+        String __VIEWSTATEGENERATOR = null;
+        String __PREVIOUSPAGE = null;
+        String __EVENTVALIDATION = null;
+
+
         CloseableHttpClient client = HttpClients.createDefault();
         YangMing ym = new YangMing();
+        String pattern = null;
+        Pattern r = null;
+        Matcher m = null;
+        String[] strings=null;
+
+        //获取隐藏参数
+        try {
+            Document document = Jsoup.connect(homeUrl).get();
+            Elements __EVENTTARGET_INPUT = document.select("input[id=ContentPlaceHolder1_btnSearch0]");
+            System.out.println(__EVENTTARGET_INPUT.get(0).attr("onclick"));
+            pattern ="(new WebForm_PostBackOptions(\\(\".+\",))";
+
+            r = Pattern.compile(pattern);
+            m = r.matcher(__EVENTTARGET_INPUT.get(0).attr("onclick"));
+            System.out.println(m.groupCount());
+            if (m.find()){
+                strings = m.group(0).split("\"");
+                __EVENTTARGET = strings[1];
+            }
+
+            __VIEWSTATE = document.select("input[id=__VIEWSTATE]").get(0).attr("value");
+            __VIEWSTATEGENERATOR = document.select("input[id=__VIEWSTATEGENERATOR]").get(0).attr("value");
+            __PREVIOUSPAGE = document.select("input[id=__PREVIOUSPAGE]").get(0).attr("value");
+            __EVENTVALIDATION = document.select("input[id=__EVENTVALIDATION]").get(0).attr("value");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
 
         //获取出发港口
         Map portCodeMap = new HashMap();
@@ -57,14 +160,28 @@ public class YangMing extends WebAnalysis{
         String portDestinationCode = ym.getPortCode(ym.getHtmlByGet(client,portUrl,portDestinationCodeMap,portHeaderMap));
         System.out.println(portDestinationCode);
 
+
         //调参
         Map yangMingSearchDataMap = new HashMap();
-        yangMingSearchDataMap.put("__EVENTTARGET","ctl00$ContentPlaceHolder1$btnSearch0");
-        yangMingSearchDataMap.put("__EVENTARGUMENT","");
-        yangMingSearchDataMap.put("__VIEWSTATE","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ZGlzcGxheTpub25lO2QCJw9kFgJmD2QWAgIEDw8WAh8CBeAaPGxpIGNsYXNzPSdkcm9wZG93biBkcm9wZG93bi1zdWJtZW51IG1lbnVfbGknPiA8YSB0YWJpbmRleCA9Jy0xJyBjbGFzcz0nZHJvcGRvd24tdG9nZ2xlJyAgZGF0YS10b2dnbGU9J2Ryb3Bkb3duJyBocmVmPScjJyBvbmNsaWNrPXNldExvY2FsU2l0ZSgnQkUnLCdlbi11cycpOyA+IEJlbGdpdW08L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdDQScsJ2VuLXVzJyk7ID4gQ2FuYWRhPC9hPjwvbGk+PGxpIGNsYXNzPSdkcm9wZG93biBkcm9wZG93bi1zdWJtZW51IG1lbnVfbGknPiA8YSB0YWJpbmRleCA9Jy0xJyBjbGFzcz0nZHJvcGRvd24tdG9nZ2xlJyAgZGF0YS10b2dnbGU9J2Ryb3Bkb3duJyBocmVmPScjJyBvbmNsaWNrPXNldExvY2FsU2l0ZSgnQ04nLCd6aC1jbicpOyA+IENoaW5hKOeugOS9k+S4reaWhyk8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdISycsJ3poLXR3Jyk7ID4gQ2hpbmEtSG9uZyBLb25nKOe5gemrlOS4reaWhyk8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdFRycsJ2VuLXVzJyk7ID4gRWd5cHQ8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdERScsJ2VuLXVzJyk7ID4gR2VybWFueTwvYT48L2xpPjxsaSBjbGFzcz0nZHJvcGRvd24gZHJvcGRvd24tc3VibWVudSBtZW51X2xpJz4gPGEgdGFiaW5kZXggPSctMScgY2xhc3M9J2Ryb3Bkb3duLXRvZ2dsZScgIGRhdGEtdG9nZ2xlPSdkcm9wZG93bicgaHJlZj0nIycgb25jbGljaz1zZXRMb2NhbFNpdGUoJ0lOJywnZW4tdXMnKTsgPiBJbmRpYTwvYT48L2xpPjxsaSBjbGFzcz0nZHJvcGRvd24gZHJvcGRvd24tc3VibWVudSBtZW51X2xpJz4gPGEgdGFiaW5kZXggPSctMScgY2xhc3M9J2Ryb3Bkb3duLXRvZ2dsZScgIGRhdGEtdG9nZ2xlPSdkcm9wZG93bicgaHJlZj0nIycgb25jbGljaz1zZXRMb2NhbFNpdGUoJ0lUJywnZW4tdXMnKTsgPiBJdGFseTwvYT48L2xpPjxsaSBjbGFzcz0nZHJvcGRvd24gZHJvcGRvd24tc3VibWVudSBtZW51X2xpJz4gPGEgdGFiaW5kZXggPSctMScgY2xhc3M9J2Ryb3Bkb3duLXRvZ2dsZScgIGRhdGEtdG9nZ2xlPSdkcm9wZG93bicgaHJlZj0nIycgb25jbGljaz1zZXRMb2NhbFNpdGUoJ0pQJywnamEtanAnKTsgPiBKYXBhbijml6XmnKzoqp4pPC9hPjwvbGk+PGxpIGNsYXNzPSdkcm9wZG93biBkcm9wZG93bi1zdWJtZW51IG1lbnVfbGknPiA8YSB0YWJpbmRleCA9Jy0xJyBjbGFzcz0nZHJvcGRvd24tdG9nZ2xlJyAgZGF0YS10b2dnbGU9J2Ryb3Bkb3duJyBocmVmPScjJyBvbmNsaWNrPXNldExvY2FsU2l0ZSgnS1InLCdrby1LUicpOyA+IEtvcmVhKO2VnOq1reyWtCk8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdNWScsJ2VuLXVzJyk7ID4gTWFsYXlzaWE8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdOTCcsJ2VuLXVzJyk7ID4gTmV0aGVybGFuZHM8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdQSCcsJ2VuLXVzJyk7ID4gUGhpbGlwcGluZXM8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdTRycsJ2VuLXVzJyk7ID4gU2luZ2Fwb3JlPC9hPjwvbGk+PGxpIGNsYXNzPSdkcm9wZG93biBkcm9wZG93bi1zdWJtZW51IG1lbnVfbGknPiA8YSB0YWJpbmRleCA9Jy0xJyBjbGFzcz0nZHJvcGRvd24tdG9nZ2xlJyAgZGF0YS10b2dnbGU9J2Ryb3Bkb3duJyBocmVmPScjJyBvbmNsaWNrPXNldExvY2FsU2l0ZSgnVFcnLCd6aC10dycpOyA+IFRhaXdhbijnuYHpq5TkuK3mlocpPC9hPjwvbGk+PGxpIGNsYXNzPSdkcm9wZG93biBkcm9wZG93bi1zdWJtZW51IG1lbnVfbGknPiA8YSB0YWJpbmRleCA9Jy0xJyBjbGFzcz0nZHJvcGRvd24tdG9nZ2xlJyAgZGF0YS10b2dnbGU9J2Ryb3Bkb3duJyBocmVmPScjJyBvbmNsaWNrPXNldExvY2FsU2l0ZSgnVFInLCdlbi11cycpOyA+IFR1cmtleShUdXJraXNoKTwvYT48L2xpPjxsaSBjbGFzcz0nZHJvcGRvd24gZHJvcGRvd24tc3VibWVudSBtZW51X2xpJz4gPGEgdGFiaW5kZXggPSctMScgY2xhc3M9J2Ryb3Bkb3duLXRvZ2dsZScgIGRhdGEtdG9nZ2xlPSdkcm9wZG93bicgaHJlZj0nIycgb25jbGljaz1zZXRMb2NhbFNpdGUoJ0FFJywnZW4tdXMnKTsgPiBVQUU8L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdHQicsJ2VuLXVzJyk7ID4gVW5pdGVkIEtpbmdkb208L2E+PC9saT48bGkgY2xhc3M9J2Ryb3Bkb3duIGRyb3Bkb3duLXN1Ym1lbnUgbWVudV9saSc+IDxhIHRhYmluZGV4ID0nLTEnIGNsYXNzPSdkcm9wZG93bi10b2dnbGUnICBkYXRhLXRvZ2dsZT0nZHJvcGRvd24nIGhyZWY9JyMnIG9uY2xpY2s9c2V0TG9jYWxTaXRlKCdWTicsJ2VuLXVzJyk7ID4gVmlldG5hbTwvYT48L2xpPmRkAgsPZBYCAgsPZBYCZg9kFgQCBQ8PZBYCHgdvbmZvY3VzBTppZih0aGlzLnZhbHVlPT0nKElucHV0IGxvY2F0aW9uIG5hbWUuLi4pJyl7dGhpcy52YWx1ZT0nJzt9ZAIVDw9kFgIfBAU6aWYodGhpcy52YWx1ZT09JyhJbnB1dCBsb2NhdGlvbiBuYW1lLi4uKScpe3RoaXMudmFsdWU9Jyc7fWRkbkBkY+unn3ATnt4aCiWXQFc3C5aPwCbf/KCz8a/kxzg=");
-        yangMingSearchDataMap.put("__VIEWSTATEGENERATOR","D33A6342");
-        yangMingSearchDataMap.put("__PREVIOUSPAGE","z1UQqKr4NIfsci_1WpKvVznekqWGPFvUncZIeWo9eJcDPe5x_xB-a5-ZQs2Bjc--T0ayjpDtKNhSYfXTBuA7QbSyab6mIvq2kgYVkr32vStLqy_gzOCJ_15j1Juq0kZ70");
-        yangMingSearchDataMap.put("__EVENTVALIDATION","/wEdACH3clAByf3FBzA/uPTnOx9e0kzCBn0GUXaybVvEgpGhJBan8Hipa+RH80BtXbRl05cVKm2QObfOHv4blEBfrAgEQSDCMfw7FN3se4IlFUFNZwcT55ELczTiJdZdBbjd+jjgfUbRDP1Za3tqCVuKq3JEilszF1fEdRbrNJpbE3QLQGeUoYRkJtnNa5MIrup723GrO92XpGZzAjiJf/VTxtfRD8S/fVI8QOjmC5BCjLpbvOvR4V3EgbS0+ZZwcCcLplGrtYCiLBSnHdjIHVISU8+uTyVDPw+3qib0zZbchOgQMlEpdxvAzt5ef+KRyITlk22h9amUJ2dDm3gSYCRKJGNHPIBMIlmoQr48AB2TxQ2k4iHphYGS2Lf3mSRP5PZTxXd6HsoKAHqxj0BaaK8j40jC7tXrQkaCZsF4Vg8pfpiEl5MIRavcM5wp9qdF8poLUO9MFHioACK2YKaC7+2L/SzFsoIURPWEGLaERW4ekWpy+P3gIYsvzHRVFW491SRlYwHgg7TtCeg6rRhLTIXR9Qki9t1R2+o6ukNjDoWZCb/kEu/Bb9PMbK2A0Ag1gOnv/x6wClVjTow4Dwk4eTrDtriUP2hEDXmAcFqlTozVJVa8MVplsC0GCkw1CPkPiRij+afxTTULuqaFeXiMeAfnAFTFne3EdM02HHYSdp0nfVbq6RjyRBlqndtqTdICG7mbrKbi5iGcSa6VWf9iFKVO/diAQAb4wglh/cyU7pyMDennSg==");
+
+//        Map hiddenParams = ym.getNextRequestBody();
+//        //迭代参数容器
+//        Iterator<Map.Entry<String,String>> entryIterator = hiddenParams.entrySet().iterator();
+//        Map.Entry<String,String > entry = null;
+//        while (entryIterator.hasNext()){
+//            entry = entryIterator.next();
+//            if (entry.getValue()!=null){
+//                yangMingSearchDataMap.put(entry.getKey(),entry.getValue());
+//            }
+//
+//        }
+
+        yangMingSearchDataMap.put("__EVENTTARGET",__EVENTTARGET);
+        yangMingSearchDataMap.put("__EVENTARGUMENT",__EVENTARGUMENT);
+        yangMingSearchDataMap.put("__VIEWSTATE",__VIEWSTATE);
+        yangMingSearchDataMap.put("__VIEWSTATEGENERATOR",__VIEWSTATEGENERATOR);
+        yangMingSearchDataMap.put("__PREVIOUSPAGE",__PREVIOUSPAGE);
+        yangMingSearchDataMap.put("__EVENTVALIDATION",__EVENTVALIDATION);
         yangMingSearchDataMap.put("ctl00$hidButtonType","0");
         yangMingSearchDataMap.put("ctl00$hfIsInIframe","");
         yangMingSearchDataMap.put("ctl00$ctl142$hidlocalver","EN");
@@ -86,9 +203,17 @@ public class YangMing extends WebAnalysis{
 
 
         Map yangMingSearchHeaderMap = new HashMap();
-        yangMingSearchHeaderMap.put("User-Agent","User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
+        yangMingSearchHeaderMap.put("cookie",ym.cookie);
+        yangMingSearchHeaderMap.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
+        yangMingSearchHeaderMap.put("Host","o-www.yangming.com");
+        yangMingSearchHeaderMap.put("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        yangMingSearchHeaderMap.put("Accept-Language","en-US,en;q=0.5");
+        yangMingSearchHeaderMap.put("Accept-Encoding","gzip, deflate, br");
+        yangMingSearchHeaderMap.put("Referer","https://o-www.yangming.com/e-service/schedule/PointToPoint.aspx");
+        yangMingSearchHeaderMap.put("Connection","keep-alive");
+        yangMingSearchHeaderMap.put("Upgrade-Insecure-Requests","1");
         yangMingSearchHeaderMap.put("Content-Type","application/x-www-form-urlencoded");
 
-        ym.getHtmlByPost(client,searchUrl,yangMingSearchDataMap,yangMingSearchHeaderMap);
+        System.out.println(ym.getHtmlByPost(client,searchUrl,yangMingSearchDataMap,yangMingSearchHeaderMap));
     }
 }

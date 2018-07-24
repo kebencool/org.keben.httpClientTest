@@ -1,4 +1,4 @@
-package bnuz;
+package com.bnuz;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
