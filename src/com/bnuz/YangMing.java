@@ -164,7 +164,7 @@ public class YangMing extends WebAnalysis{
         //调参
         Map yangMingSearchDataMap = new HashMap();
 
-//        Map hiddenParams = ym.getNextRequestBody();
+        Map hiddenParams = ym.getNextRequestBody();
 //        //迭代参数容器
 //        Iterator<Map.Entry<String,String>> entryIterator = hiddenParams.entrySet().iterator();
 //        Map.Entry<String,String > entry = null;
