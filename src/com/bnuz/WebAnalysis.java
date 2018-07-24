@@ -1,10 +1,12 @@
-package com.bnuz;
+package bnuz;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicNameValuePair;
@@ -51,7 +53,7 @@ public abstract class WebAnalysis {
 
 
 
-    public String getHtml(CloseableHttpClient client, String url , Map params, Map header){
+    public String getHtmlByGet(CloseableHttpClient client, String url , Map params, Map header){
 
         String resultHtml = null;
         URIBuilder uriBuilder = null;
@@ -91,6 +93,58 @@ public abstract class WebAnalysis {
 
         } catch (URISyntaxException e) {
             e.printStackTrace();
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if (resultHtml == null){
+                System.out.println("log : get ajax response fail.");
+            }
+            return resultHtml;
+        }
+    }
+
+    public String getHtmlByPost(CloseableHttpClient client, String url , Map params, Map header){
+        String resultHtml = null;
+//        URIBuilder uriBuilder = null;
+        try {
+//            uriBuilder = new URIBuilder(url);
+            ArrayList<NameValuePair> queryList = new ArrayList<NameValuePair>();
+
+            //迭代参数容器
+            Iterator<Map.Entry<String,String>> entryIterator = params.entrySet().iterator();
+            Map.Entry<String,String > entry = null;
+            while (entryIterator.hasNext()){
+                entry = entryIterator.next();
+                if (entry.getValue()!=null){
+                    NameValuePair nameValuePair = new BasicNameValuePair(entry.getKey(), entry.getValue());
+                    queryList.add(nameValuePair);
+                }
+
+            }
+//            uriBuilder.addParameters(queryList);
+//            HttpGet get = new HttpGet(uriBuilder.build());
+            HttpPost post = new HttpPost(url);
+            post.setEntity(new UrlEncodedFormEntity(queryList,"UTF-8"));
+            //迭代头文件容器
+            entryIterator = header.entrySet().iterator();
+            while (entryIterator.hasNext()){
+                entry = entryIterator.next();
+                post.setHeader(entry.getKey(),entry.getValue());
+//                get.setHeader(entry.getKey(),entry.getValue());
+            }
+
+
+            CloseableHttpResponse response =client.execute(post);
+            int statusCode =response.getStatusLine().getStatusCode();
+            System.out.println("status: "+statusCode);
+            HttpEntity entity =response.getEntity();
+            resultHtml = EntityUtils.toString(entity,"utf-8");
+            System.out.println("response : "+ resultHtml);
+            response.close();
+
+
         } catch (ClientProtocolException e) {
             e.printStackTrace();
         } catch (IOException e) {

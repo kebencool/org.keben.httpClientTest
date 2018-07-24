@@ -1,4 +1,4 @@
-package com.bnuz;
+package bnuz;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -132,10 +132,10 @@ public class Zim extends WebAnalysis {
         portParamMap.put("query","hong");
         Map portHeaderMap = new HashMap();
         portHeaderMap.put("user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
-        String portCode = zim.getPortCode(zim.getHtml(client,portUrl,portParamMap,portHeaderMap));
+        String portCode = zim.getPortCode(zim.getHtmlByGet(client,portUrl,portParamMap,portHeaderMap));
         System.out.println(portCode);
         portParamMap.put("query","los");
-        String portDestinationCode = zim.getPortCode(zim.getHtml(client,portUrl,portParamMap,portHeaderMap));
+        String portDestinationCode = zim.getPortCode(zim.getHtmlByGet(client,portUrl,portParamMap,portHeaderMap));
         System.out.println(portDestinationCode);
 
 //        模拟查询
@@ -153,10 +153,10 @@ public class Zim extends WebAnalysis {
         headerMap.put("Host","www.zim.com");
         headerMap.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
 
-        pageNumber = zim.getPageNumber(zim.getHtml(client,url,paramMap,headerMap));
+        pageNumber = zim.getPageNumber(zim.getHtmlByGet(client,url,paramMap,headerMap));
         for (int i = 1 ; i <= pageNumber ; i++ ){
             paramMap.put("page",""+i);
-            String html = zim.getHtml(client,url,paramMap,headerMap);
+            String html = zim.getHtmlByGet(client,url,paramMap,headerMap);
             zim.analysisMessage(tables,html);
         }
 //        System.out.println(tables.toString());
