@@ -125,7 +125,7 @@ public class YangMing extends WebAnalysis{
                 strings = m.group(0).split("\"");
                 __EVENTTARGET = strings[1];
             }
-
+//            System.out.println(document);
             __VIEWSTATE = document.select("input[id=__VIEWSTATE]").get(0).attr("value");
             __VIEWSTATEGENERATOR = document.select("input[id=__VIEWSTATEGENERATOR]").get(0).attr("value");
             __PREVIOUSPAGE = document.select("input[id=__PREVIOUSPAGE]").get(0).attr("value");
@@ -196,23 +196,24 @@ public class YangMing extends WebAnalysis{
         yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hidTo","USLAX");
         yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hidTo_txt","los");
         yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$radServiceTerm2","0");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_Start","2018/07/23");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_End","2018/08/22");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_Start","2018/07/23");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_End","2018/08/22");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_Start","2018/07/24");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_End","2018/08/23");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_Start","2018/07/24");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_End","2018/08/23");
 
 
         Map yangMingSearchHeaderMap = new HashMap();
-        yangMingSearchHeaderMap.put("cookie",ym.cookie);
+        yangMingSearchHeaderMap.put("Cookie",ym.cookie);
         yangMingSearchHeaderMap.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
-        yangMingSearchHeaderMap.put("Host","o-www.yangming.com");
+        yangMingSearchHeaderMap.put("Host","www.yangming.com");
         yangMingSearchHeaderMap.put("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         yangMingSearchHeaderMap.put("Accept-Language","en-US,en;q=0.5");
         yangMingSearchHeaderMap.put("Accept-Encoding","gzip, deflate, br");
-        yangMingSearchHeaderMap.put("Referer","https://o-www.yangming.com/e-service/schedule/PointToPoint.aspx");
+        yangMingSearchHeaderMap.put("Referer","https://www.yangming.com/e-service/schedule/PointToPoint.aspx");
         yangMingSearchHeaderMap.put("Connection","keep-alive");
         yangMingSearchHeaderMap.put("Upgrade-Insecure-Requests","1");
         yangMingSearchHeaderMap.put("Content-Type","application/x-www-form-urlencoded");
+        yangMingSearchHeaderMap.put("Origin","https://www.yangming.com");
 
         System.out.println(ym.getHtmlByPost(client,searchUrl,yangMingSearchDataMap,yangMingSearchHeaderMap));
     }

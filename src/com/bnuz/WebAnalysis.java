@@ -3,14 +3,11 @@ package com.bnuz;
 import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.CookieStore;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -48,14 +45,14 @@ public abstract class WebAnalysis {
      */
     public abstract String getPortCode(String portMessage);
 
-
-
-
     /**
      * 模拟ajax获取查询结果页面html
      * @param client
      * @return
      */
+
+
+
     public String getHtmlByGet(CloseableHttpClient client, String url , Map params, Map header){
 
         String resultHtml = null;
@@ -77,10 +74,6 @@ public abstract class WebAnalysis {
             }
             uriBuilder.addParameters(queryList);
             HttpGet get = new HttpGet(uriBuilder.build());
-
-            //设置超时时间
-            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(10000).setConnectTimeout(10000).build();//设置请求和传输超时时间
-            get.setConfig(requestConfig);
 
             //迭代头文件容器
             entryIterator = header.entrySet().iterator();
@@ -114,9 +107,9 @@ public abstract class WebAnalysis {
 
     public String getHtmlByPost(CloseableHttpClient client, String url , Map params, Map header){
         String resultHtml = null;
-
+//        URIBuilder uriBuilder = null;
         try {
-
+//            uriBuilder = new URIBuilder(url);
             ArrayList<NameValuePair> queryList = new ArrayList<NameValuePair>();
 
             //迭代参数容器
@@ -130,10 +123,10 @@ public abstract class WebAnalysis {
                 }
 
             }
-
+//            uriBuilder.addParameters(queryList);
+//            HttpGet get = new HttpGet(uriBuilder.build());
             HttpPost post = new HttpPost(url);
             post.setEntity(new UrlEncodedFormEntity(queryList,"UTF-8"));
-
             //迭代头文件容器
             entryIterator = header.entrySet().iterator();
             while (entryIterator.hasNext()){
