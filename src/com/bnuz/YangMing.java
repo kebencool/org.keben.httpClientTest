@@ -205,6 +205,7 @@ public class YangMing extends WebAnalysis{
         Map yangMingSearchHeaderMap = new HashMap();
         yangMingSearchHeaderMap.put("Cookie",ym.cookie);
         yangMingSearchHeaderMap.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
+        //重点 不是 o-www.yangming.com
         yangMingSearchHeaderMap.put("Host","www.yangming.com");
         yangMingSearchHeaderMap.put("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         yangMingSearchHeaderMap.put("Accept-Language","en-US,en;q=0.5");
