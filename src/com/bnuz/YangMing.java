@@ -1,5 +1,6 @@
 package com.bnuz;
 
+import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
@@ -17,18 +18,19 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class YangMing extends WebAnalysis{
-    String cookie;
 
 
-    private HashMap<String, String> getNextRequestBody() throws IOException {
+    /**
+     * 获取cookie
+     * @return
+     * @throws IOException
+     */
+    private String getCookie() throws IOException {
         CloseableHttpClient client = null;
         CloseableHttpResponse response = null;
         try {
@@ -43,21 +45,8 @@ public class YangMing extends WebAnalysis{
 
             response = client.execute(get);
 
-            cookie =response.getFirstHeader("Set-Cookie").getValue();
-
-            HttpEntity entity = response.getEntity();
-            String result = EntityUtils.toString(entity);
-            Document document = Jsoup.parse(result);
-            Elements elements = document.getElementsByAttributeValue("type", "hidden");
-            HashMap<String, String> map = new HashMap();
-            for (Element element : elements) {
-                String name = element.attr("name");
-                String value = element.attr("value");
-                if (name.charAt(0) == '_') {
-                    map.put(name, value);
-                }
-            }
-            return map;
+            String cookie =response.getFirstHeader("Set-Cookie").getValue();
+            return cookie;
         } finally {
             try {
                 if (response != null) {
@@ -74,13 +63,45 @@ public class YangMing extends WebAnalysis{
     }
 
     public void analysisMessage(List tables, String resultHtml) {
+        Document document = Jsoup.parse(resultHtml);
+        Elements tbodys = document.select("tbody");
+        Elements theadTDs = document.select("thead th");
 
+        //获取表头
+        List<String> data = new ArrayList<String>();
+        for (Element td : theadTDs){
+            data.add(td.ownText());
+        }
+        tables.add(data);
+//        System.out.println(tbodys);
+
+        //获取表数据
+
+        Element tbody = tbodys.get(1);
+        Elements trs = tbody.select("tr");
+        for (Element tr : trs){
+            data = new ArrayList<String>();
+            Elements tds = tr.select("td");
+            for (Element td : tds){
+                if (td.select("td a").size()==0){
+                    data.add(td.ownText());
+                }else {
+                    data.add(td.select("td a").get(0).attr("href"));
+                }
+            }
+            tables.add(data);
+        }
     }
 
     public int getPageNumber(String resultHtml) {
         return 0;
     }
 
+    /**
+     * 获取下拉栏港口
+     * @param portMessage
+     * @return
+     */
     public String getPortCode(String portMessage) {
         String result = null;
         if (portMessage == null){
@@ -102,6 +123,7 @@ public class YangMing extends WebAnalysis{
         String __VIEWSTATEGENERATOR = null;
         String __PREVIOUSPAGE = null;
         String __EVENTVALIDATION = null;
+        String cookie = null;
 
 
         CloseableHttpClient client = HttpClients.createDefault();
@@ -164,17 +186,7 @@ public class YangMing extends WebAnalysis{
         //调参
         Map yangMingSearchDataMap = new HashMap();
 
-        Map hiddenParams = ym.getNextRequestBody();
-//        //迭代参数容器
-//        Iterator<Map.Entry<String,String>> entryIterator = hiddenParams.entrySet().iterator();
-//        Map.Entry<String,String > entry = null;
-//        while (entryIterator.hasNext()){
-//            entry = entryIterator.next();
-//            if (entry.getValue()!=null){
-//                yangMingSearchDataMap.put(entry.getKey(),entry.getValue());
-//            }
-//
-//        }
+        cookie = ym.getCookie();
 
         yangMingSearchDataMap.put("__EVENTTARGET",__EVENTTARGET);
         yangMingSearchDataMap.put("__EVENTARGUMENT",__EVENTARGUMENT);
@@ -196,14 +208,14 @@ public class YangMing extends WebAnalysis{
         yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hidTo","USLAX");
         yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hidTo_txt","los");
         yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$radServiceTerm2","0");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_Start","2018/07/24");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_End","2018/08/23");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_Start","2018/07/24");
-        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_End","2018/08/23");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_Start","2018/07/25");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$date_End","2018/08/31");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_Start","2018/07/25");
+        yangMingSearchDataMap.put("ctl00$ContentPlaceHolder1$hiddate_End","2018/08/31");
 
 
         Map yangMingSearchHeaderMap = new HashMap();
-        yangMingSearchHeaderMap.put("Cookie",ym.cookie);
+        yangMingSearchHeaderMap.put("Cookie",cookie);
         yangMingSearchHeaderMap.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0");
         //重点 不是 o-www.yangming.com
         yangMingSearchHeaderMap.put("Host","www.yangming.com");
@@ -216,6 +228,9 @@ public class YangMing extends WebAnalysis{
         yangMingSearchHeaderMap.put("Content-Type","application/x-www-form-urlencoded");
         yangMingSearchHeaderMap.put("Origin","https://www.yangming.com");
 
-        System.out.println(ym.getHtmlByPost(client,searchUrl,yangMingSearchDataMap,yangMingSearchHeaderMap));
+        String result = ym.getHtmlByPost(client,searchUrl,yangMingSearchDataMap,yangMingSearchHeaderMap);
+        List<List<String>> tables = new ArrayList<List<String>>();
+        ym.analysisMessage(tables,result);
+        System.out.println(tables);
     }
 }

@@ -141,7 +141,7 @@ public abstract class WebAnalysis {
             System.out.println("status: "+statusCode);
             HttpEntity entity =response.getEntity();
             resultHtml = EntityUtils.toString(entity,"utf-8");
-            System.out.println("response : "+ resultHtml);
+//            System.out.println("response : "+ resultHtml);
             response.close();
 
 
