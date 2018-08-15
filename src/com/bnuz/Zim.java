@@ -166,7 +166,7 @@ public class Zim extends WebAnalysis {
                 for (String s : line){
                     System.out.print(s+" || ");
                 }
-                System.out.println("---");
+                System.out.println("---222");
             }
         }
 
